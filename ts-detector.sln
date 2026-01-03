@@ -1,0 +1,35 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tree-sitter-c-sharp", "tree-sitter-c-sharp", "{21739FE9-55BA-63E7-CABE-20AC51A20BE9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{D0AF9A39-0AFF-9543-EB2D-633C4F76E76E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "highlight-test-generator", "highlight-test-generator", "{03B7CAA6-43BA-7604-E24E-E6BBE7536918}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generator", "tree-sitter-c-sharp\tools\highlight-test-generator\Generator.csproj", "{516AC7CF-2FCD-0108-5B38-5D89883DE4A6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{516AC7CF-2FCD-0108-5B38-5D89883DE4A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{516AC7CF-2FCD-0108-5B38-5D89883DE4A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{516AC7CF-2FCD-0108-5B38-5D89883DE4A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{516AC7CF-2FCD-0108-5B38-5D89883DE4A6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D0AF9A39-0AFF-9543-EB2D-633C4F76E76E} = {21739FE9-55BA-63E7-CABE-20AC51A20BE9}
+		{03B7CAA6-43BA-7604-E24E-E6BBE7536918} = {D0AF9A39-0AFF-9543-EB2D-633C4F76E76E}
+		{516AC7CF-2FCD-0108-5B38-5D89883DE4A6} = {03B7CAA6-43BA-7604-E24E-E6BBE7536918}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EB19FA20-08AB-4A3A-A7CA-0DA078E8E1C0}
+	EndGlobalSection
+EndGlobal
