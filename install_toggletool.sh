@@ -28,7 +28,7 @@ INSTALL_DIR="${SCRIPT_DIR}"
 PYTHON_BIN="python3"
 
 # Start with fallback defaults, then override if we are already in a git repo
-DEFAULT_BRANCH="add-fns"
+DEFAULT_BRANCH="sri_dev"
 DEFAULT_REPO_URL="https://github.com/tajmilur-rahman/toggle-smells.git"
 BRANCH="${DEFAULT_BRANCH}"
 REPO_URL="${DEFAULT_REPO_URL}"
@@ -113,7 +113,8 @@ if [[ ! -d "$INSTALL_DIR/.git" ]]; then
   git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$INSTALL_DIR"
 else
   log "Repository already exists. Pulling latest on branch '$BRANCH'..."
-  (cd "$INSTALL_DIR" && git fetch && git checkout "$BRANCH" && git pull --ff-only)
+  # Explicitly pull from origin/BRANCH so we don't rely on upstream tracking
+  (cd "$INSTALL_DIR" && git fetch origin "$BRANCH" && git checkout "$BRANCH" && git pull --ff-only origin "$BRANCH")
 fi
 
 # -------- Enter project root (flattened layout) --------
