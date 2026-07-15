@@ -1,6 +1,7 @@
 import re
 import os
 from detectors.regex.regex_config import spread_toggle_patterns
+from detectors.toggle_match_utils import normalize_extractor_lang
 
 comment_regexes = {
     'python': r'^\s*#.*$',
@@ -14,17 +15,24 @@ comment_regexes = {
 general_regexes = {
     'python': {
         'declare': r'(?P<toggle>\w+)\s*(?:\:\s*(?P<type>[^\s=]+))?\s*=\s*',
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9_-]{2,})',
+        # (?<![.:]) excludes qualified access like Module.MY_FLAG (not a definition)
+        'capital_identifiers': r'(?<![.:])\b(?P<toggle>[A-Z][A-Z0-9_-]{2,})\b',
         'dict_keys': r'[{,]\s*(?P<toggle>(?:[\'\"][^\'\"]*[\'\"]|[^:]+?))\s*:',
-        'enum_names': r'class\s+(?P<toggle>\w+)\(Enum\):'
+        'enum_names': r'class\s+(?P<toggle>\w+)\(Enum\):',
+        # Extracts only the member name from Class.member access (e.g. Config.enable_feature).
+        # Negative lookahead excludes plain method calls like Obj.method().
+        'qualified_member_access': r'\b[A-Z][a-zA-Z0-9_]*\.(?P<toggle>[a-zA-Z][a-zA-Z0-9_]{2,})\b(?!\s*\()',
     },
     'csharp': {
         'declare': (
             r'(public|protected|private\s+protected|private)\s+(?:static\s+|const\s+|readonly\s+)*(\w+(?:\s*<[^>]+>)?)\s+(?P<toggle>\w+)\s*(?=\s*(=|;|\[))'
         ),
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9_-]{2,})',
+        'capital_identifiers': r'(?<![.:])\b(?P<toggle>[A-Z][A-Z0-9_-]{2,})\b',
         'dict_keys': r'[{,]\s*(?P<toggle>(?:@"[^"]*"|"[^"]*"|\'[^\']*\'|[^,\s]+?))\s*,',
-        'enum_names': r'enum\s+(?P<toggle>\w+)\s*'
+        'enum_names': r'enum\s+(?P<toggle>\w+)\s*',
+        # Extracts the member name from PascalCase.PascalCase access (e.g. FeatureFlags.EnableNewUX).
+        # Requires ≥3 chars on each side to avoid short noise.
+        'qualified_member_access': r'\b[A-Z][a-zA-Z0-9_]{2,}\.(?P<toggle>[A-Z][a-zA-Z0-9_]{2,})\b(?!\s*\()',
     },
     'java': {
         'declare': (
@@ -35,12 +43,15 @@ general_regexes = {
             r'(?=\s*(=|;|\[))'
         ),
         'getter_method': r'\b\w+\.\w+\((?P<toggle>.*?)\)',
-        'method_call': r'(?P<toggle>[a-zA-Z0-9_]+)\s*=\s*\w+\.\w+\((.*?)\)',  
-        'field_access': r'\b[A-Za-z0-9_]+::(?P<toggle>\w+)\b',  
+        'method_call': r'(?P<toggle>[a-zA-Z0-9_]+)\s*=\s*\w+\.\w+\((.*?)\)',
+        'field_access': r'\b[A-Za-z0-9_]+::(?P<toggle>\w+)\b',
         'interface_declaration': r'boolean\s+(?P<toggle>[a-zA-Z0-9_]+)\(\);',
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9_-]{2,})',
+        'capital_identifiers': r'(?<![.:])\b(?P<toggle>[A-Z][A-Z0-9_-]{2,})\b',
         'dict_keys': r'\bput\s*\(\s*(?P<toggle>"[^"]*"|\'[^\']*\'|[^,\s]+?)\s*,',
-        'enum_names': r'enum\s+(?P<toggle>\w+)\s*'
+        'enum_names': r'enum\s+(?P<toggle>\w+)\s*',
+        # Extracts only the member name from UpperClass.lowerMember access (e.g. Flags.recursive).
+        # Negative lookahead excludes method calls. .class suffix filtered by no_invalid_chars.
+        'qualified_member_access': r'\b[A-Z][a-zA-Z0-9_]*\.(?P<toggle>[a-z][a-zA-Z0-9_]{2,})\b(?!\s*\()',
     },
     'golang': {
         'declare': (
@@ -51,7 +62,7 @@ general_regexes = {
         'toggle_in_condition': r'(?P<toggle>\w+)\b(?=.*?\()',
         'struct_declaration': r'\b(?:bool|int|string|float64)\s+(?P<toggle>\w+)',
         'declare2': r'\s+(?P<toggle>\w+)\s* =',
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9_-]{2,})',
+        'capital_identifiers': r'(?<![.:])\b(?P<toggle>[A-Z][A-Z0-9_-]{2,})\b',
         'dict_keys': r'[{,]\s*(?P<toggle>(?:`[^`]*`|"[^"]*"|\'[^\']*\'|[\w.]+?))\s*:',
         'enum_names': r'type\s+(?P<toggle>\w+)\s+int\s*'
     },
@@ -63,17 +74,75 @@ general_regexes = {
             r'(?P<toggle>\w+)\s*'
             r'(?=\s*(=|;|\[))'
         ),
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9_-]{2,})',
+        'capital_identifiers': r'(?<![.:])\b(?P<toggle>[A-Z][A-Z0-9_-]{2,})\b',
         'dict_keys': r'[{,]\s*(?P<toggle>(?:"[^"]*"|\'[^\']*\'|[^,\s]+?))\s*,',
         'toggle_names': r'(Feature)?(Toggle|Flag|Enable|Disable)?\w*::(?P<toggle>\w+),',
-        'enum_names': r'enum\s+(?P<toggle>\w+)\s*'
+        'enum_names': r'enum\s+(?P<toggle>\w+)\s*',
+        # Extracts only the member name from UpperClass::member access (e.g. Feature::kEnableX).
+        # Outer name must start uppercase to exclude std::, boost:: etc.
+        'qualified_scoped_access': r'\b[A-Z][a-zA-Z0-9_]+::(?P<toggle>[a-zA-Z_][a-zA-Z0-9_]{2,})\b(?!\s*\()',
     },
     "config": {
-        'toggle_definition': r'^\s*(?P<toggle>[a-zA-Z0-9._-]+)\s*=\s*.*$',  
-        'toggle_colon_definition': r'^\s*(?P<toggle>[a-zA-Z0-9._-]+)\s*:\s*.*$',  
-        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9._-]{2,})', 
+        'toggle_definition': r'^\s*(?P<toggle>[a-zA-Z0-9._-]+)\s*=\s*.*$',
+        'toggle_colon_definition': r'^\s*(?P<toggle>[a-zA-Z0-9._-]+)\s*:\s*.*$',
+        'capital_identifiers': r'(?P<toggle>[A-Z][A-Z0-9._-]{2,})',
     }
 }
+
+_COMPILED_REGEXES = {
+    lang: {name: re.compile(pattern) for name, pattern in patterns.items()}
+    for lang, patterns in general_regexes.items()
+}
+
+# Identifiers that are language keywords or structural tokens, never enum constants.
+_ENUM_CONST_STOPWORDS = frozenset({
+    'public', 'private', 'protected', 'static', 'final', 'abstract',
+    'override', 'Override', 'new', 'extends', 'implements', 'throws',
+    'return', 'void', 'int', 'long', 'boolean', 'float', 'double',
+    'char', 'byte', 'short', 'String', 'Object', 'null', 'true',
+    'false', 'this', 'super', 'class', 'interface', 'enum', 'import',
+    'package', 'default', 'switch', 'case', 'break', 'continue',
+    # C++ / C# extras
+    'const', 'constexpr', 'auto', 'typename', 'namespace', 'using',
+    'struct', 'union', 'typedef', 'internal', 'sealed', 'readonly',
+    'var', 'get', 'set', 'event', 'delegate', 'async', 'await',
+})
+
+_ENUM_BODY_RE = re.compile(r'\benum\s+\w+\s*\{([^}]+)\}', re.DOTALL)
+
+
+def _extract_enum_constants(content, lang):
+    """Extract individual enum constant names from enum body declarations.
+
+    This separate extraction path is needed because enum constants used as
+    feature flags are often short (e.g. 'recursive', 'revert') and would be
+    dropped by the standard length filter applied to other patterns.
+    Applies to Java, C#, and C++ only.
+    """
+    if lang not in ('java', 'csharp', 'c++'):
+        return []
+    constants = []
+    for body_match in _ENUM_BODY_RE.finditer(content):
+        body = body_match.group(1)
+        # Constants appear before the first ';' which starts the methods section
+        semi_pos = body.find(';')
+        const_section = body[:semi_pos] if semi_pos != -1 else body
+        # Strip comments and annotations before splitting
+        const_section = re.sub(r'//[^\n]*', '', const_section)
+        const_section = re.sub(r'/\*.*?\*/', '', const_section, flags=re.DOTALL)
+        const_section = re.sub(r'@\w+(?:\s*\([^)]*\))?', '', const_section)
+        const_section = re.sub(r'\([^)]*\)', '', const_section)
+        for part in const_section.split(','):
+            part = part.strip()
+            # Skip parts with '=' (e.g. MAX_VALUE = LAST — sentinel values, not toggles)
+            if '=' in part:
+                continue
+            if (re.fullmatch(r'[a-zA-Z_]\w*', part)
+                    and part not in _ENUM_CONST_STOPWORDS
+                    and len(part) >= 2):
+                constants.append(part)
+    return constants
+
 
 language_keywords = {
     'python': ['__', '__main__', 'True', 'False', 'None', 'async', 'await', 'self', '"true"', '"false"', '__name__', '"CRITICAL"', '"ERROR"', '"WARNING"', '"INFO"'],
@@ -98,6 +167,9 @@ def no_invalid_chars(toggle):
     for char in invalid_chars:
         if char in toggle:
             return False
+    # Java reflection suffix (e.g. SomeClass.class) is never a toggle name
+    if toggle.endswith('.class'):
+        return False
     return True
 
 
@@ -110,21 +182,34 @@ def larger_is_from_toggle(content, var_a, var_b):
 def filter_substrings(toggles, config_file_contents):
     toggles = sorted(toggles, key=len, reverse=True)
     filtered_toggles = []
+    seen = set()
     for toggle in toggles:
         flag = True
         for larger_toggle in toggles:
             if toggle in larger_toggle and toggle != larger_toggle:
-                flag = False
-                content = config_file_contents.replace(larger_toggle, "")
-                if toggle in content and not larger_is_from_toggle(config_file_contents, larger_toggle, toggle):
-                    filtered_toggles.append(toggle)
-        if flag:
+                if _has_standalone_toggle(config_file_contents, toggle):
+                    flag = True
+                else:
+                    flag = False
+                    content = config_file_contents.replace(larger_toggle, "")
+                    if (toggle in content
+                            and not larger_is_from_toggle(config_file_contents, larger_toggle, toggle)
+                            and toggle not in seen):
+                        filtered_toggles.append(toggle)
+                        seen.add(toggle)
+        if flag and toggle not in seen:
             filtered_toggles.append(toggle)
+            seen.add(toggle)
     return filtered_toggles
+
+def _has_standalone_toggle(config_file_contents, toggle):
+    pattern = re.compile(rf'\b{re.escape(toggle)}\b')
+    return bool(pattern.search(config_file_contents))
 
 
 def extract_value_for_toggle(toggle, config_file_contents):
-    assignment_pattern = re.compile(rf'{re.escape(toggle)}.*\s*=\s*(.+)\n')
+    # Use =(?!=) to match assignment '=' but not comparison '=='
+    assignment_pattern = re.compile(rf'{re.escape(toggle)}[^=\n]*=(?!=)\s*(.+)\n')
     match = assignment_pattern.search(config_file_contents)
 
     if match:
@@ -133,7 +218,8 @@ def extract_value_for_toggle(toggle, config_file_contents):
             value = value[1:-1]
         return value
 
-    assignment_pattern = (re.compile(rf'{re.escape(toggle)}.*\s*:\s*(.+)\n'))
+    # Colon-style (YAML/properties): require toggle at start of line to avoid ternary ':'
+    assignment_pattern = re.compile(rf'^\s*{re.escape(toggle)}\s*:\s*(.+)\n', re.MULTILINE)
     match = assignment_pattern.search(config_file_contents)
     if match:
         value = match.group(1).strip()
@@ -159,12 +245,19 @@ def filter_wrong_values(toggles, config_file_contents):
     for toggle in toggles:
         value = extract_value_for_toggle(toggle, config_file_contents)
         if value:
+            stripped_value = value.strip().strip('"').strip("'")
+            # Short boolean-like RHS values are valid toggles (e.g. on/off/true).
+            if len(stripped_value) <= 5 and stripped_value.lower() in {
+                "on", "off", "true", "false", "yes", "no", "1", "0",
+            }:
+                filtered_toggles.append(toggle)
+                continue
             if (not re.search(dict_or_list_pattern, value) and
                     not re.search(ip_address_pattern, value) and
                     not re.search(percentage_pattern, value) and
                     not re.search(url_pattern, value) and
                     not re.search(directory_pattern, value) and
-                    not re.search(language_code_pattern, value) and
+                    not (len(stripped_value) == 2 and re.search(language_code_pattern, value)) and
                     not re.search(None_pattern, value)) or re.search(function_call_pattern, value):
                 filtered_toggles.append(toggle)
         else:
@@ -230,14 +323,20 @@ def filter_toggles(toggles, language, file_contents):
 
 def apply_combined_regexes(combined_content, language):
     toggles = set()
-    patterns = general_regexes.get(language)
-    if patterns:
-        for pattern in patterns.keys():
-            compiled_pattern = re.compile(patterns[pattern])
-            matches = compiled_pattern.finditer(combined_content)
-            for match in matches:
-                toggle = match.group('toggle')
-                toggles.add(toggle)
+    patterns = _COMPILED_REGEXES.get(language)
+    if not patterns:
+        return toggles
+    for name, compiled_pattern in patterns.items():
+        for match in compiled_pattern.finditer(combined_content):
+            gd = match.groupdict()
+            toggle = gd.get('toggle') or gd.get('toggle2')
+            if not toggle:
+                continue
+            # getter_method captures method arguments; skip unquoted qualified
+            # names (e.g. Flags.revert) since qualified_member_access handles those.
+            if name == 'getter_method' and '.' in toggle and not toggle[0] in ('"', "'"):
+                continue
+            toggles.add(toggle)
     return toggles
 
 
@@ -283,7 +382,7 @@ def extract_toggles_from_config_files(config_files, lang=None):
             file_content = file.read()
 
         # Determine the language if not explicitly provided
-        file_lang = lang or get_language_from_extension(conf_file)
+        file_lang = normalize_extractor_lang(lang or get_language_from_extension(conf_file))
 
         # Remove comments based on the file type
         file_content = remove_comments(file_content, file_lang)
@@ -296,6 +395,13 @@ def extract_toggles_from_config_files(config_files, lang=None):
             list(combined_toggles), file_lang, file_contents=file_content
         )
         toggle_list.extend(filtered_toggles)
+
+        # Extract enum constants directly from enum bodies — these bypass the
+        # standard length filter because enum flag names are often short.
+        lang_kws = set(language_keywords.get(file_lang, []))
+        for const in _extract_enum_constants(file_content, file_lang):
+            if const not in lang_kws and no_invalid_chars(const):
+                toggle_list.append(const)
 
     # Remove duplicates and invalid toggles
     return list(set(filter(None, toggle_list)))

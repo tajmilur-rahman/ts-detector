@@ -5,7 +5,6 @@ from tree_sitter import Language, Parser
 _ROOT_DIR = Path(__file__).resolve().parent
 _BUILD_DIR = _ROOT_DIR / "build"
 
-# Platform-specific shared library extension
 _SYSTEM = platform.system().lower()
 if _SYSTEM == "windows":
     _LIB_EXT = ".dll"
@@ -21,7 +20,7 @@ LANGUAGES = {
     "cpp": "cpp",
     "c++": "cpp",
     "go": "go",
-    "csharp": "c_sharp" 
+    "csharp": "c_sharp"
 }
 LANG_OBJS = {lang: Language(LANGUAGE_SO, lib) for lang, lib in LANGUAGES.items()}
 
@@ -29,11 +28,45 @@ MACRO_NODE_TYPES = {
     "cpp": {"preproc_function_def", "preproc_def"},
 }
 
+_FUNCTION_NODE_TYPES = {
+    "function_definition", "method_definition", "method_declaration",
+    "constructor_declaration", "constructor_body",
+}
+
+_PARSER_CACHE = {}
+_TREE_CACHE = {}
+
+
+def _content_fingerprint(source_code, lang_key):
+    return (lang_key, len(source_code), hash(source_code))
+
+
+def parse_source_cached(source_code, lang_name):
+    lang_key = lang_name.lower().replace("c++", "cpp").replace("c#", "csharp")
+    key = _content_fingerprint(source_code, lang_key)
+    if key not in _TREE_CACHE:
+        parser = _get_parser(lang_key)
+        source_bytes = source_code.encode("utf-8")
+        tree = parser.parse(source_bytes)
+        _TREE_CACHE[key] = (tree, source_bytes)
+    return _TREE_CACHE[key]
+
+
+def _get_parser(lang_name):
+    if lang_name not in _PARSER_CACHE:
+        parser = Parser()
+        parser.set_language(LANG_OBJS[lang_name])
+        _PARSER_CACHE[lang_name] = parser
+    return _PARSER_CACHE[lang_name]
+
+
+def _slice_source_bytes(source_code, start_byte, end_byte):
+    source_bytes = source_code.encode("utf-8") if isinstance(source_code, str) else source_code
+    return source_bytes[start_byte:end_byte].decode("utf-8", errors="ignore")
+
 
 def extract_functions(source_code, lang_name):
-    parser = Parser()
-    parser.set_language(LANG_OBJS[lang_name])
-    tree = parser.parse(bytes(source_code, "utf8"))
+    tree, source_bytes = parse_source_cached(source_code, lang_name)
     root = tree.root_node
     funcs = []
     lang_key = lang_name.lower().replace("c++", "cpp")
@@ -62,10 +95,10 @@ def extract_functions(source_code, lang_name):
 
     def visit(node):
         node_type = node.type
-        if node_type in ("function_definition", "method_definition", "method_declaration"):
+        if node_type in _FUNCTION_NODE_TYPES:
             name_node = resolve_function_name(node)
             if name_node:
-                name = source_code[name_node.start_byte:name_node.end_byte]
+                name = source_bytes[name_node.start_byte:name_node.end_byte].decode("utf-8", errors="ignore")
                 funcs.append({
                     "name": name,
                     "start_byte": node.start_byte,
@@ -75,7 +108,7 @@ def extract_functions(source_code, lang_name):
             name = None
             for child in node.children:
                 if child.type == "identifier":
-                    name = source_code[child.start_byte:child.end_byte]
+                    name = source_bytes[child.start_byte:child.end_byte].decode("utf-8", errors="ignore")
                     break
             if not name:
                 line_no = node.start_point[0] + 1
@@ -93,8 +126,9 @@ def extract_functions(source_code, lang_name):
 
 def match_toggle_usage(source_code, functions, toggle_name):
     results = {}
+    source_bytes = source_code.encode("utf-8") if isinstance(source_code, str) else source_code
     for fn in functions:
-        body = source_code[fn["start_byte"]:fn["end_byte"]]
+        body = source_bytes[fn["start_byte"]:fn["end_byte"]].decode("utf-8", errors="ignore")
         count = body.count(toggle_name)
         if count > 0:
             results[fn["name"]] = count
