@@ -361,9 +361,24 @@ def remove_comments(content, language):
     if comment_pattern:
         content = re.sub(comment_pattern, '', content, flags=re.MULTILINE)
 
-    # Remove block comments (/* ... */)    
+    # Remove block comments (/* ... */)
     if language in ['java', 'csharp', 'c++', 'golang', 'c']:
         content = re.sub(r'/\*[\s\S]*?\*/', '', content, flags=re.MULTILINE)
+    return content
+
+
+_IMPORT_LINE_RE = {
+    'csharp': re.compile(r'^\s*(?:using|namespace)\s+[\w.]+\s*;?\s*$', re.MULTILINE),
+    'java':   re.compile(r'^\s*(?:import|package)\s+[\w.]+\s*;?\s*$', re.MULTILINE),
+}
+
+def _strip_import_lines(content, language):
+    """Remove import/using/namespace/package declarations to avoid extracting
+    namespace components (e.g. 'Collections' from 'using System.Collections')
+    as false-positive toggle names."""
+    pattern = _IMPORT_LINE_RE.get(language)
+    if pattern:
+        return pattern.sub('', content)
     return content
 
 def extract_toggles_from_config_files(config_files, lang=None):
@@ -386,6 +401,7 @@ def extract_toggles_from_config_files(config_files, lang=None):
 
         # Remove comments based on the file type
         file_content = remove_comments(file_content, file_lang)
+        file_content = _strip_import_lines(file_content, file_lang)
 
         # Apply regex patterns to extract toggles
         combined_toggles = apply_combined_regexes(file_content, file_lang)

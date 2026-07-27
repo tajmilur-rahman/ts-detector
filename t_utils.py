@@ -82,6 +82,25 @@ def _count_toggles_in_functions(
         )
         if fn_counts:
             per_fn_counts[fn["name"]] = fn_counts
+
+    # Catch toggles used at class/module level (field initializers, static
+    # declarations, module-level vars) that tree-sitter does not include in
+    # any function body.  Whole-file count minus sum of per-function counts
+    # gives the class-level remainder.
+    source_text = source_bytes.decode("utf-8", errors="ignore")
+    whole_file_counts = tmu.count_terms_in_text(source_text, term_map, term_pattern)
+    fn_total = {}
+    for fn_counts in per_fn_counts.values():
+        for toggle, count in fn_counts.items():
+            fn_total[toggle] = fn_total.get(toggle, 0) + count
+    class_level = {
+        toggle: count - fn_total.get(toggle, 0)
+        for toggle, count in whole_file_counts.items()
+        if count - fn_total.get(toggle, 0) > 0
+    }
+    if class_level:
+        per_fn_counts["class_level"] = class_level
+
     return per_fn_counts
 
 def _initial_alias_resolution(raw_rhs_map, toggles):
