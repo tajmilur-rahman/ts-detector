@@ -99,6 +99,24 @@ def _validate_analysis(result, toggle_set):
     return clean
 
 
+def _verify_presence(analysis, content):
+    """
+    Post-validation: remove any toggle the LLM claims is present but whose
+    name does not actually appear as a word boundary in the file content.
+    This catches hallucinations where the LLM reports a toggle from the list
+    that isn't in the file (e.g. confused by a similarly-named toggle that is).
+    Only applied to Pass 1 (direct detection) results — not Pass 2 (alias),
+    where the toggle name is intentionally absent from the file.
+    """
+    verified = {}
+    for toggle, data in analysis.items():
+        if re.search(r'\b' + re.escape(toggle) + r'\b', content, re.IGNORECASE):
+            verified[toggle] = data
+        else:
+            print(f"    [LLM] Dropping '{toggle}' — not found in file (hallucination)")
+    return verified
+
+
 def _merge_analyses(base, additions):
     """Merge additional per-toggle analysis into base (union of all fields)."""
     for toggle, data in additions.items():
@@ -425,6 +443,7 @@ def analyze_project(code_files, toggle_list, lang, model=None):
         print(f"    [{idx}/{len(direct_candidates)}] {os.path.basename(file_path)}", end=" ... ", flush=True)
         raw = _analyze_file(file_path, content, toggle_list, lang, model)
         clean = _validate_analysis(raw, toggle_set)
+        clean = _verify_presence(clean, content)   # drop hallucinated toggles
         if clean:
             all_analyses[file_path] = clean
             for toggle, data in clean.items():
