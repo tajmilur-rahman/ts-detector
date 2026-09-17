@@ -16,6 +16,7 @@ import detectors.helper as helper
 import detectors.spread_detector.spread_detector as sd
 import detectors.dead_detector.dead_detector as dd
 import detectors.nested_detector.nested_detector as nd
+from detectors.file_filter import filter_production_files, filter_non_generated
 import os
 import re
 
@@ -29,7 +30,7 @@ language_map = {
 }
 
 
-def detect(lang, code_files, t_config_files, t_usage):
+def detect(lang, code_files, t_config_files, t_usage, use_llm=False, llm_model=None):
     if lang is None:
         raise ValueError("Language is not defined.")
 
@@ -38,6 +39,10 @@ def detect(lang, code_files, t_config_files, t_usage):
 
     if t_config_files is None:
         raise ValueError("A list of config files is required.")
+
+    if use_llm:
+        from detectors.llm.llm_detector import llm_detect
+        return llm_detect(lang, code_files, t_config_files, t_usage, llm_model=llm_model)
 
     toggle_source_files = code_files + t_config_files
 
@@ -76,6 +81,7 @@ def process_config_toggles(toggles, pattern_type):
 def extract_dead_toggles(lang, code_files, t_config_files):
     # Extract toggles from config files
     toggles = get_toggles_from_config_files(t_config_files, lang)
+    code_files = filter_non_generated(code_files)   # include test files; exclude only generated/vendor
     code_files_contents = helper.get_code_file_contents(lang, code_files)
 
     dead_toggles = dd.find_dead_toggles(toggles, code_files, code_files_contents)
@@ -83,6 +89,7 @@ def extract_dead_toggles(lang, code_files, t_config_files):
 
 def extract_nested_toggles(lang, code_files, t_config_files):
     toggles = toggle_extractor.extract_toggles_from_config_files(t_config_files)
+    code_files = filter_production_files(code_files)   # production only
     code_files_contents = helper.get_code_file_contents(lang, code_files)
 
     nested_data = nd.process_code_files(lang, code_files, code_files_contents, toggles, proximity=3)
@@ -91,6 +98,7 @@ def extract_nested_toggles(lang, code_files, t_config_files):
 def extract_spread_toggles(lang, code_files, t_config_files):
     spread_toggles = defaultdict(list)
     toggles = get_toggles_from_config_files(t_config_files, lang)
+    code_files = filter_production_files(code_files)   # production only
 
     for code_file in code_files:
         if not os.path.exists(code_file):
@@ -141,6 +149,7 @@ def extract_spread_toggles(lang, code_files, t_config_files):
 
 def extract_mixed_toggles(lang, code_files):
     mixed_toggles = defaultdict(lambda: defaultdict(int))
+    code_files = filter_production_files(code_files)   # production only
     code_files_contents = helper.get_code_file_contents(lang, code_files)
     mixed_patterns = helper.get_mixed_toggle_var_patterns(lang)
 
@@ -171,6 +180,7 @@ def extract_toggle_matches(func_body, patterns):
 
 def extract_enum_toggles(lang, code_files, t_config_files):
     toggles = set(get_toggles_from_config_files(t_config_files, lang))
+    code_files = filter_production_files(code_files)   # production only
     code_files_contents = helper.get_code_file_contents(lang, code_files)
 
     result = {

@@ -55,6 +55,11 @@ def main():
     parser.add_argument('-t', '--toggle-usage', required=False, choices=patterns, help='Toggle usage pattern to detect')
     parser.add_argument('-l', '--language', required=False,
                         help='Programming language (optional, auto-detect if not provided)')
+    parser.add_argument('--llm', action='store_true', default=False,
+                        help='Use LLM-based detection (Ollama) instead of regex')
+    parser.add_argument('--llm-model', default=None,
+                        help='Ollama model to use (default: value in llm_config.py). '
+                             'Example: --llm-model qwen2.5-coder:32b')
 
     args = parser.parse_args()
     source_path = args.source_path.rstrip("/")
@@ -66,6 +71,8 @@ def main():
     output_path = args.output
     toggle_usage = args.toggle_usage
     lang = args.language
+    use_llm = args.llm
+    llm_model = args.llm_model
 
     if not lang:
         config_files = []
@@ -145,7 +152,7 @@ def main():
         res = {}
         print(f"Parsing {toggle_usage} toggles")
         try:
-            detected_toggles = t_utils.detect(lang, code_files or [], config_files_paths, toggle_usage)
+            detected_toggles = t_utils.detect(lang, code_files or [], config_files_paths, toggle_usage, use_llm=use_llm, llm_model=llm_model)
             res[toggle_usage] = detected_toggles
         except Exception as exc:
             print(f"Parsing Error ({toggle_usage} toggles): {exc}")
@@ -169,7 +176,7 @@ def main():
 
             print(f"Parsing {p} toggles")
             try:
-                detected_toggles = t_utils.detect(lang, code_files or [], config_files_paths, p)
+                detected_toggles = t_utils.detect(lang, code_files or [], config_files_paths, p, use_llm=use_llm, llm_model=llm_model)
                 res[p] = detected_toggles
             except Exception as exc:
                 print(f"Parsing Error ({p} toggles): {exc}")
