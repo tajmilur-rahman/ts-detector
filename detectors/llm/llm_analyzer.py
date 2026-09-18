@@ -290,9 +290,10 @@ def _analyze_large_file(file_path, content, toggle_list, lang, model):
             chunk_result = _llm_call(prompt, f"{label}/{func_name}", model)
 
         clean = _validate_analysis(chunk_result, toggle_set)
+        # Tree-sitter told us exactly which function this is — overwrite the
+        # LLM's functions field to avoid garbled code fragments on large files.
         for data in clean.values():
-            if func_name not in data.get("functions", []):
-                data.setdefault("functions", []).insert(0, func_name)
+            data["functions"] = [func_name]
         merged = _merge_analyses(merged, clean)
 
     # ----- analyse class-level code (outside all functions) -----
