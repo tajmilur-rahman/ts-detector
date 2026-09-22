@@ -11,6 +11,10 @@ from detectors.llm.llm_config import OLLAMA_MODEL, MAX_FILE_CHARS
 
 _LLM_TIMEOUT = 90
 
+# Cache: tuple(sorted(config_files)) → toggle_list
+# Avoids re-calling the LLM extractor for every pattern when config files are identical.
+_extractor_cache = {}
+
 
 class _LLMTimeout(Exception):
     pass
@@ -56,6 +60,12 @@ def extract_toggles_llm(config_files, model=None):
     """
     if model is None:
         model = OLLAMA_MODEL
+
+    cache_key = tuple(sorted(config_files))
+    if cache_key in _extractor_cache:
+        cached = _extractor_cache[cache_key]
+        print(f"  [LLM extractor] toggle list cached ({len(cached)} toggle(s))")
+        return cached
 
     all_toggles = []
 
@@ -108,4 +118,6 @@ def extract_toggles_llm(config_files, model=None):
             signal.alarm(0)
             print(f"  [LLM extractor] failed for {config_file}: {exc}")
 
-    return list(set(filter(None, all_toggles)))
+    result = list(set(filter(None, all_toggles)))
+    _extractor_cache[cache_key] = result
+    return result

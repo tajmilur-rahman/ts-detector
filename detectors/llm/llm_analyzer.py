@@ -30,6 +30,10 @@ from detectors.llm.llm_config import OLLAMA_MODEL, MAX_FILE_CHARS, MAX_TOGGLES_P
 
 MAX_ALIAS_HOPS = 3
 
+# Cache: (frozenset(toggle_list), tuple(sorted(code_files))) → direct_candidates list
+# Avoids re-scanning all files for every pattern when toggle list and file list are identical.
+_grep_cache = {}
+
 # Mapping from CLI lang names to the keys expected by function_utils.extract_functions
 _LANG_KEY_MAP = {
     "golang": "go",
@@ -449,18 +453,22 @@ def analyze_project(code_files, toggle_list, lang, model=None):
     if not toggle_list:
         return all_analyses, alias_map
 
-    quick_pattern = re.compile(
-        r'\b(?:' + '|'.join(re.escape(t) for t in toggle_list) + r')\b',
-        re.IGNORECASE,
-    )
-
-    direct_candidates = []
-    for f in code_files:
-        content = _read_file(f)
-        if content and quick_pattern.search(content):
-            direct_candidates.append((f, content))
-
-    print(f"  [LLM analyzer] Pass 1: {len(direct_candidates)}/{len(code_files)} files contain a toggle name")
+    grep_key = (frozenset(toggle_list), tuple(sorted(code_files)))
+    if grep_key in _grep_cache:
+        direct_candidates = _grep_cache[grep_key]
+        print(f"  [LLM analyzer] Pass 1: {len(direct_candidates)}/{len(code_files)} files contain a toggle name (grep cached)")
+    else:
+        quick_pattern = re.compile(
+            r'\b(?:' + '|'.join(re.escape(t) for t in toggle_list) + r')\b',
+            re.IGNORECASE,
+        )
+        direct_candidates = []
+        for f in code_files:
+            content = _read_file(f)
+            if content and quick_pattern.search(content):
+                direct_candidates.append((f, content))
+        _grep_cache[grep_key] = direct_candidates
+        print(f"  [LLM analyzer] Pass 1: {len(direct_candidates)}/{len(code_files)} files contain a toggle name")
 
     for idx, (file_path, content) in enumerate(direct_candidates, 1):
         print(f"    [{idx}/{len(direct_candidates)}] {os.path.basename(file_path)}", end=" ... ", flush=True)
