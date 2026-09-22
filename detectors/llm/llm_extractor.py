@@ -5,13 +5,23 @@ Replaces the regex-based toggle_extractor for the --llm pipeline.
 import json
 import re
 import os
+import signal
 import ollama
 from detectors.llm.llm_config import OLLAMA_MODEL, MAX_FILE_CHARS
+
+_LLM_TIMEOUT = 90
+
+
+class _LLMTimeout(Exception):
+    pass
+
+
+def _alarm_handler(signum, frame):
+    raise _LLMTimeout()
 
 
 def _parse_json_array(text):
     """Robustly extract a JSON array from LLM response text."""
-    # Try direct parse first
     text = text.strip()
     try:
         data = json.loads(text)
@@ -22,7 +32,6 @@ def _parse_json_array(text):
     except json.JSONDecodeError:
         pass
 
-    # Find the first [...] block
     match = re.search(r'\[[\s\S]*?\]', text)
     if match:
         try:
@@ -40,11 +49,14 @@ def _parse_json_array(text):
     return toggles
 
 
-def extract_toggles_llm(config_files):
+def extract_toggles_llm(config_files, model=None):
     """
     Extract feature toggle names from config/source files using LLM.
     Returns a deduplicated list of toggle name strings.
     """
+    if model is None:
+        model = OLLAMA_MODEL
+
     all_toggles = []
 
     for config_file in config_files:
@@ -76,18 +88,24 @@ def extract_toggles_llm(config_files):
             "If none found, return: []"
         )
 
+        signal.signal(signal.SIGALRM, _alarm_handler)
+        signal.alarm(_LLM_TIMEOUT)
         try:
             response = ollama.chat(
-                model=OLLAMA_MODEL,
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
                 options={"temperature": 0},
             )
+            signal.alarm(0)
             raw = response["message"]["content"]
             toggles = _parse_json_array(raw)
             valid = [str(t).strip() for t in toggles if t and isinstance(t, str) and len(t.strip()) > 2]
             all_toggles.extend(valid)
             print(f"  [LLM extractor] {os.path.basename(config_file)}: {len(valid)} toggle(s) found")
+        except _LLMTimeout:
+            print(f"  [LLM extractor] timeout ({_LLM_TIMEOUT}s) for {config_file} — skipping")
         except Exception as exc:
+            signal.alarm(0)
             print(f"  [LLM extractor] failed for {config_file}: {exc}")
 
     return list(set(filter(None, all_toggles)))

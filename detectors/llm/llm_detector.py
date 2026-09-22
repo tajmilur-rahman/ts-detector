@@ -156,7 +156,7 @@ def llm_detect(lang, code_files, t_config_files, t_usage, llm_model=None):
     llm_model overrides the default model in llm_config.py when provided.
     """
     print(f"\n[LLM] Extracting toggles from {len(t_config_files)} config file(s)...")
-    toggle_list = llm_extractor.extract_toggles_llm(t_config_files)
+    toggle_list = llm_extractor.extract_toggles_llm(t_config_files, model=llm_model)
     print(f"[LLM] Extracted {len(toggle_list)} toggle(s): "
           f"{toggle_list[:6]}{'...' if len(toggle_list) > 6 else ''}")
 

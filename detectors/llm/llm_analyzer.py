@@ -23,6 +23,7 @@ Returns:
 import json
 import re
 import os
+import signal
 import ollama
 
 from detectors.llm.llm_config import OLLAMA_MODEL, MAX_FILE_CHARS, MAX_TOGGLES_PER_PROMPT
@@ -227,15 +228,36 @@ def _alias_prompt(file_label, snippet, context_json):
 # LLM callers
 # ---------------------------------------------------------------------------
 
+_LLM_TIMEOUT = 90  # seconds; SIGALRM interrupts ANY blocking call (TCP recv, etc.)
+
+
+class _LLMTimeout(Exception):
+    pass
+
+
+def _alarm_handler(signum, frame):
+    raise _LLMTimeout()
+
+
 def _llm_call(prompt, label, model):
+    # signal.alarm() is the only mechanism that reliably interrupts a blocking
+    # recv() call when the LLM hangs. It works regardless of httpx/httpcore
+    # internals and also catches Ollama queue stalls (not just slow generation).
+    signal.signal(signal.SIGALRM, _alarm_handler)
+    signal.alarm(_LLM_TIMEOUT)
     try:
         response = ollama.chat(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             options={"temperature": 0},
         )
+        signal.alarm(0)
         return _parse_json_object(response["message"]["content"])
+    except _LLMTimeout:
+        print(f"    [LLM] timeout ({_LLM_TIMEOUT}s) for {label} — skipping")
+        return {}
     except Exception as exc:
+        signal.alarm(0)
         print(f"    [LLM] call failed for {label}: {exc}")
         return {}
 
