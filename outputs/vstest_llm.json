@@ -1,0 +1,187 @@
+{
+  "dead": {
+    "toggles": [],
+    "qty": 0
+  },
+  "spread": {
+    "toggles": {
+      "VSTEST_DISABLE_STANDARD_OUTPUT_FORWARDING": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.Client/DesignMode/DesignModeClient.cs",
+          "via_alias": false,
+          "aliases_used": [
+            "_forwardOutput"
+          ],
+          "Functions": [
+            {
+              "class_level": 1,
+              "DesignModeClient": 1
+            }
+          ],
+          "count": 2
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.ObjectModel/RunSettings/RunConfiguration.cs",
+          "via_alias": false,
+          "aliases_used": [
+            "ForwardStandardOutput"
+          ],
+          "Functions": [
+            {
+              "class_level": 1,
+              "RunConfiguration.RunConfiguration()": 1
+            }
+          ],
+          "count": 2
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.TestHostProvider/Hosting/TestHostManagerCallbacks.cs",
+          "via_alias": true,
+          "aliases_used": [
+            "_forwardOutput"
+          ],
+          "Functions": [
+            {
+              "StandardOutputReceivedCallback; 'class_level'": 1,
+              "ErrorReceivedCallback; 'class_level'": 1
+            }
+          ],
+          "count": 2
+        }
+      ],
+      "VSTEST_DISABLE_FASTER_JSON_SERIALIZATION": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.CommunicationUtilities/JsonDataSerializer.cs",
+          "via_alias": false,
+          "aliases_used": [
+            "DisableFastJson"
+          ],
+          "Functions": [
+            {
+              "class_level": 1,
+              "JsonDataSerializer": 1
+            }
+          ],
+          "count": 2
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.ObjectModel/TestProperty/TestProperty.cs",
+          "via_alias": true,
+          "aliases_used": [
+            "DisableFastJson"
+          ],
+          "Functions": [
+            {
+              "DisableFastJson; 'class_level'": 1
+            }
+          ],
+          "count": 1
+        }
+      ],
+      "VSTEST_DISABLE_SERIALTESTRUN_DECORATOR": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.Common/ExtensionDecorators/ExtensionDecoratorFactory.cs",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "Decorate": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.CrossPlatEngine/DataCollection/DotnetDataCollectionLauncher.cs",
+          "via_alias": true,
+          "aliases_used": [
+            "environmentVariables"
+          ],
+          "Functions": [
+            {
+              "LaunchDataCollector": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.CrossPlatEngine/DataCollection/DataCollectionLauncher.cs",
+          "via_alias": true,
+          "aliases_used": [
+            "environmentVariables"
+          ],
+          "Functions": [
+            {
+              "LaunchDataCollector": 1
+            }
+          ],
+          "count": 1
+        }
+      ],
+      "VSTEST_DISABLE_ARTIFACTS_POSTPROCESSING": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/vstest.console/Internal/ConsoleLogger.cs",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "TestRunCompleteHandler": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/vstest.console/Processors/ArtifactProcessingPostProcessModeProcessor.cs",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "ContainsPostProcessCommand": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/vstest.console/Processors/Utilities/ArgumentProcessorFactory.cs",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "ArgumentProcessorFactory.Create": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/Microsoft.TestPlatform.CrossPlatEngine/PostProcessing/ArtifactProcessingManager.cs",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "CollectArtifacts": 1,
+              "PostProcessArtifactsAsync": 1
+            }
+          ],
+          "count": 2
+        }
+      ]
+    },
+    "qty": 4
+  },
+  "nested": {
+    "nested_toggles": [
+      {
+        "toggles": [
+          "VSTEST_DISABLE_ARTIFACTS_POSTPROCESSING",
+          "VSTEST_DISABLE_ARTIFACTS_POSTPROCESSING_NEW_SDK_UX"
+        ],
+        "file": "../Documents/RESEARCH_TOGGLE/projectfiles/vstest-main/src/vstest.console/Internal/ConsoleLogger.cs",
+        "function": "TestRunCompleteHandler"
+      }
+    ],
+    "qty": 1
+  },
+  "enum": {
+    "toggles": {},
+    "qty": 0
+  }
+}
