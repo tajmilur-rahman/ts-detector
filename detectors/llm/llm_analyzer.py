@@ -427,6 +427,63 @@ def _analyze_file(file_path, content, toggle_list, lang, model):
 
 
 # ---------------------------------------------------------------------------
+# grep helpers
+# ---------------------------------------------------------------------------
+
+def _build_direct_candidates(code_files, toggle_list):
+    """
+    Find code files that contain at least one toggle name, then read them.
+    Uses native grep (subprocess) for the file scan — orders of magnitude
+    faster than reading every file in Python. Falls back to Python regex if
+    grep is unavailable or fails.
+    """
+    import subprocess, tempfile
+
+    # --- try native grep first ---
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as pf:
+            pf.write('\n'.join(toggle_list))
+            patterns_file = pf.name
+
+        # grep -l: list matching files, -i: case-insensitive, -F: fixed strings (no regex)
+        # Pass explicit file paths (no -r; -r is for directory traversal, not file lists).
+        # Use a generous timeout — cold disk cache can make even native grep slow.
+        result = subprocess.run(
+            ['grep', '-l', '-i', '-F', '-f', patterns_file] + list(code_files),
+            capture_output=True, text=True, timeout=600,
+        )
+        os.unlink(patterns_file)
+
+        matching = set(filter(None, result.stdout.split('\n')))
+        candidates = []
+        for f in code_files:
+            if f in matching:
+                content = _read_file(f)
+                if content:
+                    candidates.append((f, content))
+        return candidates
+
+    except Exception as exc:
+        print(f"  [grep] native grep failed ({exc}), falling back to Python scan")
+        try:
+            os.unlink(patterns_file)
+        except Exception:
+            pass
+
+    # --- Python fallback ---
+    quick_pattern = re.compile(
+        r'\b(?:' + '|'.join(re.escape(t) for t in toggle_list) + r')\b',
+        re.IGNORECASE,
+    )
+    candidates = []
+    for f in code_files:
+        content = _read_file(f)
+        if content and quick_pattern.search(content):
+            candidates.append((f, content))
+    return candidates
+
+
+# ---------------------------------------------------------------------------
 # public entry point
 # ---------------------------------------------------------------------------
 
@@ -458,15 +515,7 @@ def analyze_project(code_files, toggle_list, lang, model=None):
         direct_candidates = _grep_cache[grep_key]
         print(f"  [LLM analyzer] Pass 1: {len(direct_candidates)}/{len(code_files)} files contain a toggle name (grep cached)")
     else:
-        quick_pattern = re.compile(
-            r'\b(?:' + '|'.join(re.escape(t) for t in toggle_list) + r')\b',
-            re.IGNORECASE,
-        )
-        direct_candidates = []
-        for f in code_files:
-            content = _read_file(f)
-            if content and quick_pattern.search(content):
-                direct_candidates.append((f, content))
+        direct_candidates = _build_direct_candidates(code_files, toggle_list)
         _grep_cache[grep_key] = direct_candidates
         print(f"  [LLM analyzer] Pass 1: {len(direct_candidates)}/{len(code_files)} files contain a toggle name")
 
