@@ -1,0 +1,64 @@
+{
+  "dead": {
+    "toggles": [
+      "allow_civiform_admin_access_programs",
+      "application_exportable",
+      "cf_optional_questions",
+      "civiform_image_tag",
+      "customized_eligibility_message_enabled",
+      "disabled_visibility_condition_enabled",
+      "multiple_file_upload_enabled",
+      "name_suffix_dropdown_enabled",
+      "no_duplicate_questions_for_migration_enabled",
+      "program_cache_enabled",
+      "program_migration_enabled",
+      "session_replay_protection_enabled",
+      "show_civiform_image_tag_on_landing_page",
+      "staging_disable_demo_mode_logins",
+      "suggest_programs_on_application_confirmation_page"
+    ],
+    "qty": 15
+  },
+  "spread": {
+    "toggles": {
+      "admin_oidc_enhanced_logout_enabled": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/services/settings/SettingsManifest.java",
+          "via_alias": false,
+          "aliases_used": [
+            "n"
+          ],
+          "Functions": [
+            {
+              "N_OIDC_ENHANCED_LOGOUT_ENABLED\");": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/auth/oidc/OidcClientProvider.java",
+          "via_alias": true,
+          "aliases_used": [
+            "civiformConfig"
+          ],
+          "Functions": [
+            {
+              "getLogoutURL": 1,
+              "getConfig": 1
+            }
+          ],
+          "count": 2
+        }
+      ]
+    },
+    "qty": 1
+  },
+  "nested": {
+    "nested_toggles": [],
+    "qty": 0
+  },
+  "enum": {
+    "toggles": {},
+    "qty": 0
+  }
+}
