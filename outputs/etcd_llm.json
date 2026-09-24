@@ -1,0 +1,49 @@
+{
+  "dead": {
+    "toggles": [
+      "DistributedTracing"
+    ],
+    "qty": 1
+  },
+  "spread": {
+    "toggles": {
+      "InitialCorruptCheck": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/config/config.go",
+          "via_alias": false,
+          "aliases_used": [
+            "InitialCorruptCheck"
+          ],
+          "Functions": [
+            {
+              "ServerConfig.VerifyBootstrap": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/etcdmain/help.go",
+          "via_alias": true,
+          "aliases_used": [
+            "InitialCorruptCheck"
+          ],
+          "Functions": [
+            {
+              "etcdmain.main; 'class_level' if outside any function": 1
+            }
+          ],
+          "count": 1
+        }
+      ]
+    },
+    "qty": 1
+  },
+  "nested": {
+    "nested_toggles": [],
+    "qty": 0
+  },
+  "enum": {
+    "toggles": {},
+    "qty": 0
+  }
+}
