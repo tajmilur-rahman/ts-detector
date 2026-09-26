@@ -1,0 +1,89 @@
+{
+  "spread": {
+    "toggles": {
+      "InitialCorruptCheck": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/config/config.go",
+          "via_alias": false,
+          "aliases_used": [
+            "InitialCorruptCheck"
+          ],
+          "Functions": [
+            {
+              "VerifyBootstrap": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/etcdmain/help.go",
+          "via_alias": true,
+          "aliases_used": [
+            "InitialCorruptCheck"
+          ],
+          "Functions": [
+            {
+              "etcdmain.main; class_level": 1
+            }
+          ],
+          "count": 1
+        }
+      ],
+      "StopGRPCServiceOnDefrag": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/config/config.go",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {}
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/etcdserver/api/v3rpc/health.go",
+          "via_alias": false,
+          "aliases_used": [
+            "stopGRPCServiceOnDefrag"
+          ],
+          "Functions": [
+            {
+              "newHealthNotifier": 1,
+              "defragStarted": 1
+            }
+          ],
+          "count": 2
+        }
+      ],
+      "DistributedTracing": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/config/config.go",
+          "via_alias": false,
+          "aliases_used": [
+            "ExperimentalEnableDistributedTracing"
+          ],
+          "Functions": [
+            {
+              "VerifyBootstrap": 1,
+              "VerifyJoinExisting": 1
+            }
+          ],
+          "count": 2
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/etcd-main/server/etcdserver/api/v3rpc/grpc.go",
+          "via_alias": true,
+          "aliases_used": [
+            "ExperimentalEnableDistributedTracing"
+          ],
+          "Functions": [
+            {
+              "Server": 1
+            }
+          ],
+          "count": 1
+        }
+      ]
+    },
+    "qty": 3
+  }
+}

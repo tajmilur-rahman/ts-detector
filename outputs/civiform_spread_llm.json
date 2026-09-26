@@ -1,0 +1,122 @@
+{
+  "spread": {
+    "toggles": {
+      "show_not_production_banner_enabled": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/views/components/PageNotProductionBanner.java",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "render": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/services/settings/SettingsManifest.java",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              " return getBool(\"SHOW_NOT_PRODUCT": 1,
+              "class_level": 1,
+              "return getBool(\"SHOW_NOT_PRODUCT\"), \"return getBool(\"SHOW_NOT_PRODUCTION_BANNER_ENABLED\", request);": 1,
+              "getShowNotProductionBannerEnabled": 1
+            }
+          ],
+          "count": 4
+        }
+      ],
+      "program_cache_enabled": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/services/settings/SettingsManifest.java",
+          "via_alias": false,
+          "aliases_used": [
+            "PROGRAM_CACHE_ENABLED"
+          ],
+          "Functions": [
+            {
+              "class_level": 1,
+              "NABLED": 1,
+              "getProgramCacheEnabled": 1,
+              "NABLED\");\n  }\n\n  /** E": 1
+            }
+          ],
+          "count": 4
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/controllers/dev/DevToolsController.java",
+          "via_alias": true,
+          "aliases_used": [
+            "PROGRAM_CACHE_ENABLED"
+          ],
+          "Functions": [
+            {
+              "clearCacheIfEnabled": 1
+            }
+          ],
+          "count": 1
+        }
+      ],
+      "admin_oidc_enhanced_logout_enabled": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/services/settings/SettingsManifest.java",
+          "via_alias": false,
+          "aliases_used": [
+            "ADMIN_OIDC_ENHANCED_LOGOUT_ENABLED"
+          ],
+          "Functions": [
+            {
+              "N_OIDC_ENHANCED_LOGOUT_ENABLED": 1,
+              "class_level": 1,
+              "N_OIDC_ENHANCED_LOGOUT_ENABLED\");": 1
+            }
+          ],
+          "count": 3
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/auth/oidc/OidcClientProvider.java",
+          "via_alias": true,
+          "aliases_used": [
+            "civiformConfig"
+          ],
+          "Functions": [
+            {
+              "getLogoutURL": 1,
+              "getConfig": 1
+            }
+          ],
+          "count": 2
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/auth/oidc/CiviformOidcProfileCreator.java",
+          "via_alias": true,
+          "aliases_used": [
+            "enhancedLogoutEnabled"
+          ],
+          "Functions": [
+            {
+              "enhancedLogoutEnabled": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/civiform-main/server/app/auth/oidc/CiviformOidcLogoutActionBuilder.java",
+          "via_alias": true,
+          "aliases_used": [
+            "enhancedLogoutEnabled"
+          ],
+          "Functions": [
+            {
+              "enhancedLogoutEnabled": 1
+            }
+          ],
+          "count": 1
+        }
+      ]
+    },
+    "qty": 3
+  }
+}

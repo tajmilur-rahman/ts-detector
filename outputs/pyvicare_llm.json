@@ -1,0 +1,43 @@
+{
+  "dead": {
+    "toggles": [],
+    "qty": 0
+  },
+  "spread": {
+    "toggles": {
+      "raise_exception_on_command_failure": [
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/PyViCare-master/PyViCare/PyViCareAbstractOAuthManager.py",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "__handle_command_error": 1
+            }
+          ],
+          "count": 1
+        },
+        {
+          "file": "../Documents/RESEARCH_TOGGLE/projectfiles/PyViCare-master/PyViCare/PyViCareUtils.py",
+          "via_alias": false,
+          "aliases_used": [],
+          "Functions": [
+            {
+              "handleAPICommandErrors": 1
+            }
+          ],
+          "count": 1
+        }
+      ]
+    },
+    "qty": 1
+  },
+  "nested": {
+    "nested_toggles": [],
+    "qty": 0
+  },
+  "enum": {
+    "toggles": {},
+    "qty": 0
+  }
+}
