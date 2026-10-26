@@ -28,7 +28,7 @@ INSTALL_DIR="${SCRIPT_DIR}"
 PYTHON_BIN="python3"
 
 # Start with fallback defaults, then override if we are already in a git repo
-DEFAULT_BRANCH="add-fns"
+DEFAULT_BRANCH="main"
 DEFAULT_REPO_URL="https://github.com/tajmilur-rahman/toggle-smells.git"
 BRANCH="${DEFAULT_BRANCH}"
 REPO_URL="${DEFAULT_REPO_URL}"
@@ -172,28 +172,43 @@ Next steps:
 1) Activate the environment:
    source "$(pwd)/${VENV_DIR}/bin/activate"
 
-2) Run the detector (examples):
+2) Run the detector — regex mode (default):
+
+   # Detect all patterns and write JSON output:
+   python tsd.py -p /path/to/source \\
+     -c path/to/config \\
+     -o outputs/output.json
 
    # Detect a single pattern (e.g., nested) in a C++ repo:
    python tsd.py -p /path/to/source \\
      -c src/module/Toggles.cpp src/module/Features.cpp \\
      -t nested
 
-   # Detect all patterns and write JSON output:
-   python tsd.py -p /path/to/source \\
-     -c path/to/config1 path/to/config2 \\
-     -o outputs/output.json
+3) Run the detector — LLM mode (optional, requires Ollama):
 
-   # Force language (e.g., python):
+   # Install Ollama and pull the model first:
+   #   brew install ollama        (macOS)
+   #   ollama pull qwen2.5-coder:7b
+   #   ollama serve               (keep running in a separate terminal)
+
    python tsd.py -p /path/to/source \\
-     -c path/to/config1 path/to/config2 \\
-     -l python -o outputs/python-output.json
+     -c path/to/config \\
+     -l java --llm \\
+     -o outputs/output_llm.json
+
+   # Use a larger model for better accuracy:
+   python tsd.py -p /path/to/source \\
+     -c path/to/config \\
+     --llm --llm-model qwen2.5-coder:32b \\
+     -o outputs/output_llm.json
 
 Tips:
 - On macOS, if a build fails, ensure Command Line Tools are installed:
     xcode-select --install
 - On Debian/Ubuntu, if a build fails, try:
     sudo apt-get update && sudo apt-get install -y build-essential cmake pkg-config
+- LLM mode is slower than regex mode. Large projects may take 30–90 minutes
+  on first run; the grep scan is cached across patterns within a single run.
 
 Repo location:
   $INSTALL_DIR

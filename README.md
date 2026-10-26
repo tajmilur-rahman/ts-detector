@@ -14,168 +14,250 @@ Following are the usage patterns our tool can detect as of now.
 
 - **Supported languages**: Python, Java, C++, C, Go, C#.
 - **Patterns detected**: `dead`, `spread`, `nested`, `mixed`, `enum`.
+- **Two detection modes**: regex-based (default) and LLM-based (`--llm` flag).
 - **Auto-detects programming language**: Automatically identifies the language based on file extension or content.
 - **Config paths as relative paths**: Configuration files are provided as paths relative to the source directory.
+
+## Setup
+
+### 1. Clone the repository
+
+```
+git clone https://github.com/tajmilur-rahman/toggle-smells.git
+cd toggle-smells/ts-detector
+```
+
+Or use the installer script (see [One-shot installer](#one-shot-installer) below).
+
+### 2. Create and activate a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate        # macOS / Linux
+venv\Scripts\activate           # Windows
+```
+
+### 3. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Build tree-sitter language grammars
+
+```bash
+python build_languages.py
+```
+
+This creates `build/my-languages.dylib` (macOS), `.so` (Linux), or `.dll` (Windows).
+
+> **macOS**: if the build fails, first run `xcode-select --install`.  
+> **Linux**: if the build fails, run `sudo apt-get install -y build-essential cmake`.
+
+### 5. (Optional) Install Ollama for LLM-based detection
+
+LLM mode requires [Ollama](https://ollama.com) running locally with the `qwen2.5-coder:7b` model.
+
+```bash
+# Install Ollama (macOS)
+brew install ollama
+
+# Pull the model
+ollama pull qwen2.5-coder:7b
+
+# Start the Ollama server (keep this running in a separate terminal)
+ollama serve
+```
+
+Skip this step if you only intend to use the default regex-based detection.
+
+---
 
 ## Usage
 
 ### Basic Syntax
-1. Clone the repository:
-https://github.com/tajmilur-rahman/toggle-smells.git
-2. CD into ts-detector in commandline
 
-3. Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-4. Install the dependencies
-pip install -r requirements.txt
-
-5. Build the languages (creates build/my-languages.{so|dylib|dll} automatically)
-python build_languages.py
-
-6. Run the tool
-`` 
-python tsd.py -p <source_path> -c <config_paths> [-o <output_path>] [-t <toggle_usage_pattern>] [-l <language>]
-``
+```bash
+python tsd.py -p <source_path> -c <config_path> [options]
+```
 
 ### Required Arguments
 
-- `-p, --source-path`: Path to the source code directory.
-- `-c, --config-path`: Relative paths (from `source-path`) to the configuration files used in the analysis.
+| Flag | Description |
+|------|-------------|
+| `-p, --source-path` | Path to the source code directory. |
+| `-c, --config-path` | Config file path(s), **relative to `source-path`**. Accepts multiple values. |
 
 ### Optional Arguments
 
-- `-o, --output`: Path to save the output JSON file. If not provided, the result will be printed to the console.
-- `-t, --toggle-usage`: Specify which toggle usage pattern to detect. If not provided, the script will detect all patterns. Options are:
-  - `dead`
-  - `spread`
-  - `nested`
-  - `mixed` (applicable for C++, C, and C#)
-  - `enum`
-- `-l, --language`: Specify the programming language. If not provided, the script will attempt to auto-detect the language based on file extensions or content.
+| Flag | Description |
+|------|-------------|
+| `-o, --output` | Path to save the output JSON file. Prints to console if omitted. |
+| `-t, --toggle-usage` | Pattern to detect: `dead`, `spread`, `nested`, `mixed`, `enum`. Detects all if omitted. |
+| `-l, --language` | Programming language. Auto-detected from file extensions if omitted. |
+| `--llm` | Use LLM-based detection via Ollama instead of regex. Requires Ollama running locally. |
+| `--llm-model` | Ollama model to use. Default: `qwen2.5-coder:7b`. Example: `--llm-model qwen2.5-coder:32b`. |
 
-### Example Usage
+---
 
-#### Example 1: Detect `nested` usage in a C++ project and print output to the console
+## Examples
 
-`python tsd.py -p /path/to/source/ -c src/module/Toggles.cpp src/module/Features.cpp -t nested
-`
-This command will:
-- Use `/path/to/source/` as the source path.
-- Check the `src/module/Toggles.cpp` and `src/module/Features.cpp` configuration files (relative to the source path).
-- Detect only the `nested` pattern in C++ files.
-- Print the results to the console.
+### Regex mode (default)
 
-#### Example 2: Detect all toggle usage patterns and write output to a file
+```bash
+# Detect all patterns, save output to file
+python tsd.py -p /path/to/source \
+  -c path/to/config.java \
+  -o outputs/result.json
 
-`python tsd.py -p /path/to/source/ -c src/module/Toggles.cpp src/module/Features.cpp -o outputs/output.json
-`
+# Detect only the nested pattern in a C++ project
+python tsd.py -p /path/to/source \
+  -c src/module/Toggles.cpp src/module/Features.cpp \
+  -t nested
 
-This command will:
-- Detect all toggle usage patterns (`dead`, `spread`, `nested`, `mixed`, `enum`).
-- Save the results in `outputs/output.json`.
+# Force language
+python tsd.py -p /path/to/source \
+  -c path/to/config.py \
+  -l python -o outputs/result.json
+```
 
-#### Example 3: Manually specify the programming language
+### LLM mode (`--llm`)
 
-`python tsd.py -p /path/to/source/ -c src/module/Toggles.cpp src/module/Features.cpp -l python -o outputs/python-output.json
-`
+LLM mode uses a local Ollama model to extract toggle names from config files and analyze each code file for pattern usage. It handles aliases, indirect usages, and large files via tree-sitter chunking.
 
-This command will:
-- Force the detection to assume Python as the language.
-- Save the results to `outputs/python-output.json`.
+```bash
+# Detect all patterns using LLM (Java project)
+python tsd.py -p /path/to/civiform \
+  -c server/conf/helper/feature-flags.conf \
+  -l java --llm \
+  -o outputs/civiform_llm.json
 
+# Use a larger model for better accuracy
+python tsd.py -p /path/to/source \
+  -c path/to/config \
+  --llm --llm-model qwen2.5-coder:32b \
+  -o outputs/result.json
+```
 
-### Note for macOS Users
-The included `tree-sitter-cpp` grammar is pre-patched with a macro to support `static_assert` on macOS (C11). No manual changes are needed after cloning the repository.
+> **Note**: LLM mode is slower than regex mode (minutes to hours depending on project size). A progress log is printed to the console. For large projects, the first run is slower; subsequent pattern runs in the same process reuse cached grep results.
 
-## Supported Languages
+---
 
-- Python
-- Java
-- C++
-- C
-- Go
-- C#
+## Sample Commands (Known Repos)
 
-If the language is not provided via the `-l` flag, the script will attempt to auto-detect the language based on file extensions or content analysis.
+| Project | Language | Command |
+|---------|----------|---------|
+| [PyViCare](https://github.com/overxfl0w13/PyViCare) | Python | `python tsd.py -p /path/to/PyViCare -c PyViCare/PyViCareUtils.py --llm -l python` |
+| [civiform](https://github.com/civiform/civiform) | Java | `python tsd.py -p /path/to/civiform -c server/conf/helper/feature-flags.conf -l java --llm` |
+| [etcd](https://github.com/etcd-io/etcd) | Go | `python tsd.py -p /path/to/etcd -c server/features/etcd_features.go -l go --llm` |
+| [vstest](https://github.com/microsoft/vstest) | C# | `python tsd.py -p /path/to/vstest -c src/Microsoft.TestPlatform.CoreUtilities/FeatureFlag/FeatureFlag.cs --llm` |
+| [OpenSearch](https://github.com/opensearch-project/OpenSearch) | Java | `python tsd.py -p /path/to/OpenSearch -c server/src/main/java/org/opensearch/common/util/FeatureFlags.java server/src/main/java/org/opensearch/common/settings/FeatureFlagSettings.java` |
+| [Dawn](https://github.com/google/dawn) | C++ | `python tsd.py -p /path/to/dawn -c src/dawn/native/Toggles.cpp src/dawn/native/Features.cpp` |
+| [Temporal](https://github.com/temporalio/temporal) | Go | `python tsd.py -p /path/to/temporal -c common/dynamicconfig/constants.go` |
 
-## Output
+---
 
-The result will be a JSON object, either printed to the console or saved to a file. The format will be similar to:
+## Output Format
+
+The result is a JSON object printed to the console or saved to a file.
+
+### Regex mode output
 
 ```json
 {
-  "dead": {
-    "toggles": ["TOGGLE_A", "TOGGLE_B"],
-    "qty": 2
-  },
+  "dead": { "toggles": ["TOGGLE_A", "TOGGLE_B"], "qty": 2 },
   "spread": {
     "toggles": {
       "TOGGLE_C": [
         {"file": "path/component/moduleA.py", "count": 3},
         {"file": "path/component/moduleC.py", "count": 1}
-      ],
-      "TOGGLE_D": [
-        {"file": "path/core/moduleB.py", "count": 2}
       ]
     },
-    "qty": 2
+    "qty": 1
   },
   "nested": {
+    "nested_toggles": [
+      {"toggles": ["TOGGLE_A", "TOGGLE_B"], "file": "src/module.py", "function": "myFunc"}
+    ],
+    "qty": 1
+  },
+  "enum": { "toggles": {}, "qty": 0 }
+}
+```
+
+### LLM mode output
+
+LLM mode produces richer output — each spread entry includes the function name, alias variable(s) used, and whether the detection was via a direct reference or an alias:
+
+```json
+{
+  "dead": { "toggles": ["TOGGLE_A"], "qty": 1 },
+  "spread": {
     "toggles": {
-      "TOGGLE_E": [
-        {"src/component/moduleA.py": ["DEPENDS_ON_TOGGLE_A"]},
-        {"src/component/moduleB.py": ["DEPENDS_ON_TOGGLE_D"]}
-        ],
+      "TOGGLE_B": [
+        {
+          "file": "path/to/file.java",
+          "via_alias": false,
+          "aliases_used": ["aliasVar"],
+          "Functions": [{"myFunction": 1}],
+          "count": 1
+        },
+        {
+          "file": "path/to/other.java",
+          "via_alias": true,
+          "aliases_used": ["aliasVar"],
+          "Functions": [{"anotherFunction": 1}],
+          "count": 1
+        }
+      ]
     },
     "qty": 1
   },
-  "enum": {
-    "toggles": ["TOGGLE_F"],
+  "nested": {
+    "nested_toggles": [
+      {"toggles": ["TOGGLE_B", "TOGGLE_C"], "file": "path/to/file.java", "function": "myFunction"}
+    ],
     "qty": 1
   },
-  "mixed": {
-    "toggles": ["TOGGLE_B"],
-    "qty": 1
-  }
+  "enum": { "toggles": {}, "qty": 0 }
 }
 ```
-In this example:
 
-- `dead`: 2 toggles are declared but never used.
-- `spread`: Toggles appear in multiple files.
-- `nested`: Toggles appear within another toggle's scope.
-- `enum`: A toggle with multiple conditional values.
-- `mixed`: A toggle that fits more than one pattern.
+---
+
+## Notes on LLM Detection Reliability
+
+- **Dead and spread** detections are backed by a grep pre-filter plus a post-LLM presence check — these are the most reliable patterns.
+- **Nested and enum** detections are LLM-interpreted without a secondary mechanical check — treat these as indicative.
+- **False negatives are possible** in very large files: the tool chunks large files by function boundary (tree-sitter), but the LLM may occasionally miss a usage within a long function.
+- Temperature is fixed at 0 for reproducibility.
+
+---
+
+## One-shot Installer
+
+```bash
+./install_toggletool.sh [-d INSTALL_DIR] [-b BRANCH] [-p PYTHON_BIN] [-r REPO_URL]
+```
+
+Example:
+```bash
+./install_toggletool.sh -d "$HOME/Repos/toggle-smells" -b main
+```
+
+---
 
 ## Recent Improvements
 
+- **LLM-based detection** (`--llm`): uses a local Ollama model to extract toggle names and detect patterns; handles aliases, indirect usages, and large files via tree-sitter chunking
+- **Alias tracking**: two-pass analysis traces toggle aliases across files to catch indirect spread
+- **SIGALRM-based timeout**: every LLM call is guarded by a 90-second OS-level timeout to prevent infinite hangs
+- **Hallucination filter**: post-LLM grep check drops any toggle the LLM reports in a file where the name does not actually appear
+- **Grep + extractor caching**: within a single run, the file scan and toggle extraction are cached across patterns so each project is scanned only once
 - Added support for multiple configuration files
-- Output now includes dependency paths for `spread` and `nested` patterns along with its dependency toggle count
-- Updated JSON structure for better clarity
+- Output now includes dependency paths for `spread` and `nested` patterns along with toggle counts
 
-# Sample commands with known repo
+---
 
-[OpenSearch](https://github.com/opensearch-project/OpenSearch): `python tsd.py -p H:\Repos\OpenSearch\ -c server\src\main\java\org\opensearch\common\util\FeatureFlags.java server\src\main\java\org\opensearch\common\settings\FeatureFlagSettings.java`
-
-[SDB2](https://github.com/mathisdt/sdb2/tree/master): `python tsd.py -p H:\Repos\sdb2 -c src\main\java\org\zephyrsoft\sdb2\Feature.java`
-
-[Sentry](https://github.com/getsentry/sentry): `python tsd.py -p H:\Repos\toggle-smells\repos\sentry\ -c src\sentry\conf\server.py src\sentry\features\temporary.py src\sentry\features\permanent.py`
-
-[Pytorch](https://github.com/pytorch/pytorch): `python tsd.py -p H:\Repos\pytorch -c torch\fx\proxy.py `
-
-[Temporal](https://github.com/temporalio/temporal): `python tsd.py -p H:\Repos\temporal -c common\dynamicconfig\constants.go `
-
-[Candence](https://github.com/uber/cadence): `python tsd.py -p H:\Repos\cadence -c common\dynamicconfig\constants.go `
-
-[Vstest](https://github.com/microsoft/vstest): `python tsd.py -p H:\Repos\vstest\ -c src\Microsoft.TestPlatform.CoreUtilities\FeatureFlag\FeatureFlag.cs`
-
-[Bitwarden/Server](https://github.com/bitwarden/server): `python tsd.py -p H:\Repos\server -c src\Core\Constants.cs `
-
-[chromium](https://github.com/chromium/chromium): `python tsd.py -p H:\Repos\chromium -c chrome\browser\flag_descriptions.cc `
-
-[Dawn](https://github.com/google/dawn): `python tsd.py -p H:\Repos\toggle-smells\repos\dawn\ -c src\dawn\native\Toggles.cpp  src\dawn\native\Features.cpp`
-
-# Video Demonstration
+## Video Demonstration
 https://drive.google.com/file/d/1vlVJeFr0PYZszajo40foBDO8QRNWkLaM/view?usp=drive_link
